@@ -33,6 +33,7 @@ fetch(`https://www.google-analytics.com/mp/collect?measurement_id=${measurementI
 2. 拷贝 `ganalytics` 目录到你的工程中，并将目录下的4个文件添加到工程中.
 3. 在`main`方法中，在主窗口显示前，初始化GA
 4. 项目中，需要发送`GA`时候，调用全局单例 `ga->sendEvent("eventName")` 即可
+5. 运行时，需要将对应的`openssl`动态库拷贝到应用程序目录下
 
 ```
 #include "ganalytics/ganalytics.h"
