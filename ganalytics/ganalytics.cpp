@@ -1,0 +1,237 @@
+#include "ganalytics.h"
+#include "ganalytics_worker.h"
+
+#include <QDataStream>
+#include <QDebug>
+#include <QLocale>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QQueue>
+#include <QSettings>
+#include <QTimer>
+#include <QUrlQuery>
+#include <QUuid>
+
+#include <QJSonObject>
+#include <QJSonDocument>
+#include <QJsonArray>
+
+GAnalytics::GAnalytics(QObject *parent) : QObject(parent)
+{
+    d = new GAnalyticsWorker(this);
+}
+
+/**
+ * Destructor of class GAnalytics.
+ */
+GAnalytics::~GAnalytics()
+{
+    delete d;
+}
+
+GAnalytics *GAnalytics::instance()
+{
+    static GAnalytics* instance = nullptr;
+    if(instance == nullptr)
+    {
+        instance = new GAnalytics();
+    }
+
+    return instance;
+}
+
+void GAnalytics::setLogLevel(GAnalytics::LogLevel logLevel)
+{
+    d->m_logLevel = logLevel;
+}
+
+GAnalytics::LogLevel GAnalytics::logLevel() const
+{
+    return d->m_logLevel;
+}
+
+// SETTER and GETTER
+void GAnalytics::setViewportSize(const QString &viewportSize)
+{
+    d->m_viewportSize = viewportSize;
+}
+
+QString GAnalytics::viewportSize() const
+{
+    return d->m_viewportSize;
+}
+
+void GAnalytics::setLanguage(const QString &language)
+{
+    d->m_language = language;
+}
+
+QString GAnalytics::language() const
+{
+    return d->m_language;
+}
+
+void GAnalytics::setAnonymizeIPs(bool anonymize)
+{
+    d->m_anonymizeIPs = anonymize;
+}
+
+bool GAnalytics::anonymizeIPs()
+{
+    return d->m_anonymizeIPs;
+}
+
+void GAnalytics::setSendInterval(int milliseconds)
+{
+    d->m_timer.setInterval(milliseconds);
+}
+
+int GAnalytics::sendInterval() const
+{
+    return (d->m_timer.interval());
+}
+
+bool GAnalytics::isEnabled()
+{
+    return d->m_isEnabled;
+}
+
+void GAnalytics::setMeasurementId(const QString &measurementId)
+{
+    d->m_measurementId = measurementId;
+}
+
+void GAnalytics::setApiSecret(const QString & apiSecret)
+{
+	d->m_apiSecret = apiSecret;
+}
+
+void GAnalytics::setClientID(const QString &clientID)
+{
+    d->m_clientID = clientID;
+}
+
+void GAnalytics::enable(bool state)
+{
+    d->enable(state);
+}
+
+int GAnalytics::version()
+{
+    return d->m_version;
+}
+
+void GAnalytics::setVertion(int version)
+{
+    d->m_version = version;
+}
+
+void GAnalytics::setNetworkAccessManager(QNetworkAccessManager *networkAccessManager)
+{
+    if (d->networkManager != networkAccessManager)
+    {
+        // Delete the old network manager if it was our child
+        if (d->networkManager && d->networkManager->parent() == this)
+        {
+            d->networkManager->deleteLater();
+        }
+
+        d->networkManager = networkAccessManager;
+    }
+}
+
+QNetworkAccessManager *GAnalytics::networkAccessManager() const
+{
+    return d->networkManager;
+}
+
+static void appendCustomValues(QUrlQuery &query, const QVariantMap &customValues)
+{
+    for (QVariantMap::const_iterator iter = customValues.begin(); iter != customValues.end(); ++iter)
+    {
+        query.addQueryItem(iter.key(), iter.value().toString());
+    }
+}
+
+/**
+ * This method is called whenever a button was pressed in the application.
+ * A query for a POST message will be created to report this event. The
+ * created query will be stored in a message queue.
+ */
+void GAnalytics::sendEvent(const QString &category, const QString &eventName, const QString &eventParamName, const QString &eventParamValue)
+{
+	/*
+    // event body example
+	{
+		"client_id": "XXXXXXXXXX.YYYYYYYYYY",
+		"events": [{
+			"name": "refund",
+			"params": {
+				"currency": "USD",
+				"value": "9.99",
+				"transaction_id": "ABC-123"
+			}
+		}]
+	}
+	*/
+
+	QJsonObject root;
+	root["client_id"] = d->m_clientID;
+	QJsonObject event;
+
+	if (!eventParamValue.isEmpty()) {
+		event["name"] = eventName + "(" + eventParamValue + ")";
+	}
+	else {
+		event["name"] = eventName;
+	}
+
+	QJsonObject eventParams;
+	eventParams["category"] = category;
+
+    // operation system
+#ifdef Q_OS_WIN
+    eventParams["os"] = "Windows";
+#endif
+#ifdef Q_OS_LINUX
+    eventParams["os"] = "Linux";
+#endif
+#ifdef Q_OS_MAC
+    eventParams["os"] = "MAC";
+#endif
+	event["params"] = eventParams;
+
+	QJsonArray eventArray;
+	eventArray.append(event);
+	root["events"] = eventArray;
+
+    d->enqueQueryWithCurrentTime(root);
+}
+
+void GAnalytics::sendEvent(const QString & eventName)
+{
+	sendEvent("", eventName, "", "");
+}
+
+/**
+ * Qut stream to persist class GAnalytics.
+ */
+QDataStream &operator<<(QDataStream &outStream, const GAnalytics &analytics)
+{
+    outStream << analytics.d->persistMessageQueue();
+
+    return outStream;
+}
+
+/**
+ * In stream to read GAnalytics from file.
+ */
+QDataStream &operator>>(QDataStream &inStream, GAnalytics &analytics)
+{
+    QList<QString> dataList;
+    inStream >> dataList;
+    analytics.d->readMessagesFromFile(dataList);
+
+    return inStream;
+}
