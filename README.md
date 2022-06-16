@@ -4,7 +4,7 @@
 
 ## 原理
 
-通过 Measurement Protocol 发送请求，注意参数格式要符合需求。错误的参数格式回返回 http 200 但是看不到数据。
+通过 Measurement Protocol 发送请求
 <https://developers.google.com/analytics/devguides/collection/protocol/ga4/verify-implementation?client_type=gtag>
 
 ```js
@@ -81,6 +81,16 @@ int main(int argc, char *argv[])
 
 3.
 ![avatar](docs/3.jpg)
+
+## 使用注意事项
+
+1. 注意参数格式要符合需求。错误的参数格式回返回 http 200 但是看不到数据。
+
+2. GA唯一事件数不能超过500个
+
+来源： <https://support.google.com/analytics/answer/9267744?hl=en&ref_topic=9756175>
+
+![avatar](docs/event_limit.jpg)
 
 ## 错误处理
 
