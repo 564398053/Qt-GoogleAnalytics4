@@ -190,6 +190,11 @@ void GAnalytics::sendEvent(const QString &category, const QString &eventName, co
 	QJsonObject eventParams;
 	eventParams["category"] = category;
 
+    // In order for user activity to display in standard reports like Realtime, engagement_time_msec and session_id must be supplied as part of the params for an event.
+    // https://developers.google.com/analytics/devguides/collection/protocol/ga4/sending-events?client_type=gtag#optional_parameters_for_reports
+    eventParams["engagement_time_msec"] = 100;
+    eventParams["session_id"] = d->m_clientID;
+
     // operation system
 #ifdef Q_OS_WIN
     eventParams["os"] = "Windows";
