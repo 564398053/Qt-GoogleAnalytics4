@@ -181,7 +181,7 @@ void GAnalytics::sendEvent(const QString &category, const QString &eventName, co
 	QJsonObject event;
 
 	if (!eventParamValue.isEmpty()) {
-		event["name"] = eventName + "(" + eventParamValue + ")";
+		event["name"] = eventName + "_" + eventParamValue;
 	}
 	else {
 		event["name"] = eventName;
