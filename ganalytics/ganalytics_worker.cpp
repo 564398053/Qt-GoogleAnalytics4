@@ -10,6 +10,7 @@
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QJSonObject>
+#include <QNetworkProxy>
 
 const QLatin1String GAnalyticsWorker::dateTimeFormat("yyyy,MM,dd-hh:mm::ss:zzz");
 
@@ -205,6 +206,9 @@ void GAnalyticsWorker::postMessage()
     if (networkManager == NULL)
     {
         networkManager = new QNetworkAccessManager(this);
+        QNetworkProxy* proxy = new QNetworkProxy();
+        proxy->setType(QNetworkProxy::NoProxy);
+        networkManager->setProxy(*proxy);
     }
 
     QNetworkReply *reply = networkManager->post(m_request, requestJSon);
